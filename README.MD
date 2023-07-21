@@ -16,9 +16,25 @@ go build .
 ./client -h
 ```
 
+```shell
+Usage of ./client:
+  -listen string
+        listen socks5 address (default ":1180")
+  -ws string
+        websocket server address (default "localhost:80")
+
+```
+
 ### Server
 ```shell
 cd server
 go build .
 ./server -h
+```
+
+```shell
+Usage of ./server:
+  -listen string
+        listen address (default ":80")
+
 ```
