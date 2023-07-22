@@ -38,3 +38,28 @@ Usage of ./server:
         listen address (default ":80")
 
 ```
+
+# 🧑‍💻 How to use
+## On server
+```shell
+./server -listen=":80"
+```
+
+## On client
+```shell
+./client -listen=":1180" -ws="your_server_ip:80"
+```
+### 💻 CLI Tool
+```shell
+export all_proxy=socks5://localhost:1180
+curl https://google.com -v
+```
+### 🐱 Clash
+```yaml
+proxies:
+  - name: "wsproxy"
+    type: socks5
+    server: localhost
+    port: 1180
+```
+> add `wsproxy` to your proxy group
