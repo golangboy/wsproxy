@@ -8,7 +8,6 @@ A lightweight proxy tool based on the WebSocket protocol
 ```shell
 git clone github.com/golangboy/wsproxy
 ```
-
 ## Client
 ```shell
 cd client
@@ -38,7 +37,20 @@ Usage of ./server:
         listen address (default ":80")
 
 ```
-
+# 🐳 Docker
+```shell
+git clone github.com/golangboy/wsproxy
+cd wsproxy
+docker build -t wsproxy .
+```
+#### client
+```shell
+docker run -itd -p 1180:1180 -e ws=your_server:80 wsproxy
+```
+#### server
+```shell
+docker run -itd -p 80:80 wsproxy
+```
 # 🧑‍💻 How to use
 ## On server
 ```shell
