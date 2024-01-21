@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/gorilla/websocket"
 	uuid "github.com/satori/go.uuid"
@@ -46,6 +47,19 @@ func main() {
 		go handleConnection(conn)
 	}
 }
+func convertToMap(input string) map[string]string {
+	result := make(map[string]string)
+
+	lines := strings.Split(input, "\n")
+	for _, line := range lines {
+		parts := strings.SplitN(line, ": ", 2)
+		if len(parts) == 2 {
+			result[strings.ToLower(strings.TrimSpace(parts[0]))] = strings.TrimSpace(parts[1])
+		}
+	}
+
+	return result
+}
 
 func handleConnection(clientConn net.Conn) {
 	defer clientConn.Close()
@@ -53,84 +67,105 @@ func handleConnection(clientConn net.Conn) {
 	// Step 1: Version identification and authentication
 	// Read and verify the SOCKS5 initial handshake message
 	buf := make([]byte, 257)
-	_, err := io.ReadAtLeast(clientConn, buf, 2)
+	nbytes, err := io.ReadAtLeast(clientConn, buf, 2)
 	if err != nil {
 		log.Printf("Failed to read client handshake: %v", err)
 		return
 	}
+	_ = nbytes
 
-	// Check SOCKS version and authentication methods
-	if buf[0] != 0x05 {
-		log.Printf("Unsupported SOCKS version: %v", buf[0])
-		return
-	}
-
-	// Number of authentication methods supported
-	numMethods := int(buf[1])
-	authMethods := buf[2 : 2+numMethods]
-
-	// Check if "no authentication" method (0x00) is supported
-	noAuth := false
-	for _, m := range authMethods {
-		if m == 0x00 {
-			noAuth = true
-			break
-		}
-	}
-
-	if !noAuth {
-		log.Printf("No supported authentication methods")
-		// Send handshake failure response to client
-		clientConn.Write([]byte{0x05, 0xFF})
-		return
-	}
-
-	// Send handshake response to client indicating "no authentication" method
-	clientConn.Write([]byte{0x05, 0x00})
-
-	// Step 2: Request processing
-	// Read and verify the SOCKS5 request
-	_, err = io.ReadAtLeast(clientConn, buf, 4)
-	if err != nil {
-		log.Printf("Failed to read client request: %v", err)
-		return
-	}
-
-	if buf[0] != 0x05 {
-		log.Printf("Unsupported SOCKS version: %v", buf[0])
-		return
-	}
-
-	if buf[1] != 0x01 {
-		log.Printf("Unsupported command: %v", buf[1])
-		return
-	}
-
-	// Check the address type
 	var destAddr string
 	var destPort string
-	switch buf[3] {
-	case 0x01: // IPv4 address
-		ip := net.IP(buf[4 : 4+net.IPv4len])
-		destAddr = ip.String()
-		destPort = fmt.Sprintf("%d", int(buf[8])<<8+int(buf[9]))
-	case 0x03: // Domain name
-		domainLen := int(buf[4])
-		domain := string(buf[5 : 5+domainLen])
-		destAddr = domain
-		destPort = strconv.Itoa(int(buf[5+domainLen])<<8 + int(buf[5+domainLen+1]))
-	case 0x04: // IPv6 address
-		ip := net.IP(buf[4 : 4+net.IPv6len])
-		destAddr = ip.String()
-		destPort = strconv.Itoa(int(buf[20])<<8 + int(buf[21]))
-	default:
-		log.Printf("Unsupported address type: %v", buf[3])
-		return
+	isSocks5 := false
+	isHttps := false
+	// Check SOCKS version and authentication methods
+	if buf[0] == 0x05 {
+		isSocks5 = true
+		// Number of authentication methods supported
+		numMethods := int(buf[1])
+		authMethods := buf[2 : 2+numMethods]
+
+		// Check if "no authentication" method (0x00) is supported
+		noAuth := false
+		for _, m := range authMethods {
+			if m == 0x00 {
+				noAuth = true
+				break
+			}
+		}
+
+		if !noAuth {
+			log.Printf("No supported authentication methods")
+			// Send handshake failure response to client
+			clientConn.Write([]byte{0x05, 0xFF})
+			return
+		}
+
+		// Send handshake response to client indicating "no authentication" method
+		clientConn.Write([]byte{0x05, 0x00})
+
+		// Step 2: Request processing
+		// Read and verify the SOCKS5 request
+		_, err = io.ReadAtLeast(clientConn, buf, 4)
+		if err != nil {
+			log.Printf("Failed to read client request: %v", err)
+			return
+		}
+
+		if buf[0] != 0x05 {
+			log.Printf("Unsupported SOCKS version: %v", buf[0])
+			return
+		}
+
+		if buf[1] != 0x01 {
+			log.Printf("Unsupported command: %v", buf[1])
+			return
+		}
+
+		// Check the address type
+		switch buf[3] {
+		case 0x01: // IPv4 address
+			ip := net.IP(buf[4 : 4+net.IPv4len])
+			destAddr = ip.String()
+			destPort = fmt.Sprintf("%d", int(buf[8])<<8+int(buf[9]))
+		case 0x03: // Domain name
+			domainLen := int(buf[4])
+			domain := string(buf[5 : 5+domainLen])
+			destAddr = domain
+			destPort = strconv.Itoa(int(buf[5+domainLen])<<8 + int(buf[5+domainLen+1]))
+		case 0x04: // IPv6 address
+			ip := net.IP(buf[4 : 4+net.IPv6len])
+			destAddr = ip.String()
+			destPort = strconv.Itoa(int(buf[20])<<8 + int(buf[21]))
+		default:
+			log.Printf("Unsupported address type: %v", buf[3])
+			return
+		}
+
+		// Send request response to client indicating success
+		clientConn.Write([]byte{0x05, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
+	} else if (buf[0] == 'G' && buf[1] == 'E') || (buf[0] == 'P' && buf[1] == 'O') || (buf[0] == 'O' && buf[1] == 'P') || (buf[0] == 'P' && buf[1] == 'U') || (buf[0] == 'D' && buf[1] == 'E') || (buf[0] == 'H' && buf[1] == 'E') || (buf[0] == 'T' && buf[1] == 'R') {
+		r := convertToMap(string(buf[:nbytes]))
+		hosts := r["host"]
+		if strings.Index(hosts, ":") == -1 {
+			destAddr = hosts
+			destPort = "80"
+		} else {
+			destAddr = strings.Split(hosts, ":")[0]
+			destPort = strings.Split(hosts, ":")[1]
+		}
+	} else if buf[0] == 'C' && buf[1] == 'O' {
+		isHttps = true
+		r := convertToMap(string(buf[:nbytes]))
+		hosts := r["host"]
+		if strings.Index(hosts, ":") == -1 {
+			destAddr = hosts
+			destPort = "443"
+		} else {
+			destAddr = strings.Split(hosts, ":")[0]
+			destPort = strings.Split(hosts, ":")[1]
+		}
 	}
-
-	// Send request response to client indicating success
-	clientConn.Write([]byte{0x05, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
-
 	u := url.URL{
 		Scheme: "ws",
 		Host:   *wsServer,
@@ -174,6 +209,15 @@ func handleConnection(clientConn net.Conn) {
 		ws.Conn.Close()
 		clientConn.Close()
 		return
+	}
+	if isHttps {
+		clientConn.Write([]byte("HTTP/1.1 200 Connection Established\r\n\r\n"))
+	}
+	if false == isSocks5 && false == isHttps {
+		err = ws.Conn.WriteJSON(common.Proto{MsgType: common.ReqData, Data: buf[:nbytes]})
+		if err != nil {
+			log.Printf("[%s]Failed to send http data to WebSocket server: %v", msgId, err)
+		}
 	}
 	go func() {
 		resp := common.Proto{}
