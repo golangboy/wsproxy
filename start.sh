@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 if [ -z $ws ]; then
     echo "Starting server"
     /app/server/app
