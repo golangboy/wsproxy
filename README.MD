@@ -66,17 +66,7 @@ docker run -itd -p 1180:1180 -e ws=your_server:80 golangboyme/wsproxy
 ```shell
 docker run -itd -p 80:80 golangboyme/wsproxy
 ```
-# 🧑‍💻 How to use
-## On server
-```shell
-./server -listen=":80"
-```
-
-## On client
-```shell
-./client -listen=":1180" -ws="your_server_ip:80"
-```
-### 💻 CLI Tool
+# 💻 Test for proxy
 ```shell
 export all_proxy=socks5://localhost:1180
 curl https://google.com -v
