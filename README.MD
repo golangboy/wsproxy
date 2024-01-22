@@ -38,6 +38,8 @@ Usage of ./server:
 
 ```
 # 🐳 Docker
+
+## From Build
 ```shell
 git clone github.com/golangboy/wsproxy
 cd wsproxy
@@ -50,6 +52,19 @@ docker run -itd -p 1180:1180 -e ws=your_server:80 wsproxy
 #### server
 ```shell
 docker run -itd -p 80:80 wsproxy
+```
+
+## From DockerHub
+```shell
+docker pull golangboyme/wsproxy
+```
+#### client
+```shell
+docker run -itd -p 1180:1180 -e ws=your_server:80 golangboyme/wsproxy
+```
+#### server
+```shell
+docker run -itd -p 80:80 golangboyme/wsproxy
 ```
 # 🧑‍💻 How to use
 ## On server
