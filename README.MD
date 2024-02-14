@@ -4,6 +4,7 @@ A lightweight proxy tool based on the WebSocket protocol
 - Lightweight
 - No configuration
 - Wrap CDN
+- Support SOCKS5/HTTP
 # 🔨️ Build
 ```shell
 git clone github.com/golangboy/wsproxy
@@ -66,17 +67,8 @@ docker run -itd -p 1180:1180 -e ws=your_server:80 golangboyme/wsproxy
 ```shell
 docker run -itd -p 80:80 golangboyme/wsproxy
 ```
-# 💻 Test for proxy
+# 💻 Test
 ```shell
 export all_proxy=socks5://localhost:1180
 curl https://google.com -v
 ```
-### 🐱 Clash
-```yaml
-proxies:
-  - name: "wsproxy"
-    type: socks5
-    server: localhost
-    port: 1180
-```
-> add `wsproxy` to your proxy group
