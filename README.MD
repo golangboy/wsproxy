@@ -25,7 +25,7 @@ Usage of ./client:
 
 ```
 
-### Server
+## Server
 ```shell
 cd server
 go build .
