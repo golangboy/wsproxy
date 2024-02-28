@@ -214,7 +214,7 @@ func handleConnection(clientConn net.Conn) {
 		clientConn.Write([]byte("HTTP/1.1 200 Connection Established\r\n\r\n"))
 	}
 	if false == isSocks5 && false == isHttps {
-		err = ws.Conn.WriteJSON(common.Proto{MsgType: common.ReqData, Data: buf[:nbytes]})
+		err = ws.Conn.WriteJSON(common.Proto{MsgType: common.ReqData, Data: buf[:nbytes], MsgId: msgId})
 		if err != nil {
 			log.Printf("[%s]Failed to send http data to WebSocket server: %v", msgId, err)
 		}
@@ -245,6 +245,7 @@ func handleConnection(clientConn net.Conn) {
 		err = ws.Conn.WriteJSON(common.Proto{
 			MsgType: common.ReqData,
 			Data:    buf[:n],
+			MsgId:   msgId,
 		})
 		ws.Unlock()
 		if err != nil {

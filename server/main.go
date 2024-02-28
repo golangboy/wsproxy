@@ -42,6 +42,7 @@ func main() {
 					}
 					err = ws.Conn.WriteJSON(common.Proto{
 						MsgType: common.ReqConnect,
+						MsgId:   msgId,
 					})
 					if err != nil {
 						log.Printf("[%s]Failed to send connection success message to the client: %v", msgId, err)
@@ -59,6 +60,7 @@ func main() {
 							err = ws.Conn.WriteJSON(common.Proto{
 								MsgType: common.ReqData,
 								Data:    buf[:n],
+								MsgId:   msgId,
 							})
 							ws.Unlock()
 							if err != nil {
