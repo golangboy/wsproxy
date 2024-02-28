@@ -1,8 +1,11 @@
 package common
 
 import (
-	"github.com/gorilla/websocket"
+	"bytes"
+	"encoding/gob"
 	"sync"
+
+	"github.com/gorilla/websocket"
 )
 
 type Proto struct {
@@ -19,3 +22,18 @@ const (
 	ReqConnect = iota
 	ReqData    = iota
 )
+
+func (p *Proto) ToBytes() []byte {
+	var buf bytes.Buffer
+	enc := gob.NewEncoder(&buf)
+	err := enc.Encode(p)
+	if err != nil {
+		return nil
+	}
+	return buf.Bytes()
+}
+func (p *Proto) FromBytes(b []byte) error {
+	buf := bytes.NewBuffer(b)
+	dec := gob.NewDecoder(buf)
+	return dec.Decode(p)
+}

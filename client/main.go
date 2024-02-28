@@ -184,11 +184,11 @@ func handleConnection(clientConn net.Conn) {
 		Conn: conn,
 	}
 	ws.Lock()
-	err = ws.Conn.WriteJSON(common.Proto{
+	err = ws.Conn.WriteMessage(websocket.BinaryMessage, (&common.Proto{
 		MsgType: common.ReqConnect,
 		Data:    []byte(base64.StdEncoding.EncodeToString([]byte(destAddr + ":" + destPort))),
 		MsgId:   msgId,
-	})
+	}).ToBytes())
 	ws.Unlock()
 	if err != nil {
 		log.Printf("[%s]Failed to write connect request to WebSocket server: %v", msgId, err)
@@ -197,7 +197,8 @@ func handleConnection(clientConn net.Conn) {
 	}
 	connectResp := common.Proto{}
 
-	err = ws.Conn.ReadJSON(&connectResp)
+	_, b, err := ws.Conn.ReadMessage()
+	connectResp.FromBytes(b)
 	if err != nil {
 		log.Printf("[%s]Failed to request proxy target from WebSocket server: %v", msgId, err)
 		clientConn.Close()
@@ -222,7 +223,8 @@ func handleConnection(clientConn net.Conn) {
 	go func() {
 		resp := common.Proto{}
 		for {
-			err = ws.Conn.ReadJSON(&resp)
+			_, p, err := ws.Conn.ReadMessage()
+			resp.FromBytes(p)
 			if err != nil {
 				log.Printf("[%s]Failed to read data from WebSocket server: %v", msgId, err)
 				break
@@ -235,18 +237,18 @@ func handleConnection(clientConn net.Conn) {
 		}
 	}()
 	for {
-		var buf [10240]byte
+		var buf [1024 * 1024 * 3]byte
 		n, err := clientConn.Read(buf[:])
 		if err != nil {
 			log.Printf("[%s]Failed to read data from the client: %v", msgId, err)
 			break
 		}
 		ws.Lock()
-		err = ws.Conn.WriteJSON(common.Proto{
+		err = ws.Conn.WriteMessage(websocket.BinaryMessage, (&common.Proto{
 			MsgType: common.ReqData,
 			Data:    buf[:n],
 			MsgId:   msgId,
-		})
+		}).ToBytes())
 		ws.Unlock()
 		if err != nil {
 			log.Printf("[%s]Failed to write data to the WebSocket server: %v", msgId, err)

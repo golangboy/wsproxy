@@ -28,7 +28,8 @@ func main() {
 			p := common.Proto{}
 			var target net.Conn
 			for {
-				err = ws.Conn.ReadJSON(&p)
+				_, b, err := ws.Conn.ReadMessage()
+				p.FromBytes(b)
 				if err != nil {
 					break
 				}
@@ -40,28 +41,28 @@ func main() {
 						log.Printf("[%s]Failed to connect to the target server: %v", msgId, err)
 						break
 					}
-					err = ws.Conn.WriteJSON(common.Proto{
+					err = ws.Conn.WriteMessage(websocket.BinaryMessage, ((&common.Proto{
 						MsgType: common.ReqConnect,
 						MsgId:   msgId,
-					})
+					}).ToBytes()))
 					if err != nil {
 						log.Printf("[%s]Failed to send connection success message to the client: %v", msgId, err)
 						break
 					}
 					go func() {
 						for {
-							buf := make([]byte, 10240)
+							buf := make([]byte, 1024*1024*3)
 							n, err := target.Read(buf[:])
 							if err != nil {
 								log.Printf("[%s]Failed to read data from the target server: %v", msgId, err)
 								break
 							}
 							ws.Lock()
-							err = ws.Conn.WriteJSON(common.Proto{
+							err = ws.Conn.WriteMessage(websocket.BinaryMessage, (&common.Proto{
 								MsgType: common.ReqData,
 								Data:    buf[:n],
 								MsgId:   msgId,
-							})
+							}).ToBytes())
 							ws.Unlock()
 							if err != nil {
 								log.Printf("[%s]Failed to send data to the client: %v", msgId, err)
